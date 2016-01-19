@@ -32,6 +32,9 @@ class Hyperlink(six.text_type):
         ret.name = name
         return ret
 
+    def __getnewargs__(self):
+        return(str(self), self.name,)
+
     is_hyperlink = True
 
 
@@ -380,7 +383,7 @@ class HyperlinkedIdentityField(HyperlinkedRelatedField):
 
 class SlugRelatedField(RelatedField):
     """
-    A read-write field the represents the target of the relationship
+    A read-write field that represents the target of the relationship
     by a unique 'slug' attribute.
     """
 

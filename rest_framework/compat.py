@@ -9,6 +9,7 @@ from __future__ import unicode_literals
 import django
 from django.conf import settings
 from django.db import connection, transaction
+from django.template import Context, RequestContext, Template
 from django.utils import six
 from django.views.generic import View
 
@@ -71,50 +72,31 @@ except ImportError:
     JSONField = None
 
 
-# Models Options old meta api
-# Django 1.8 introduced the `Options.get_fields` method that can be used to
-# implement *old* meta api methods
-# See: https://docs.djangoproject.com/en/1.9/ref/models/meta/#migrating-from-the-old-api
-if django.VERSION >= (1, 8):
-    def get_all_related_objects(opts):
-        return [
-            f for f in opts.get_fields()
-            if (f.one_to_many or f.one_to_one) and f.auto_created
-        ]
-
-    def get_all_related_many_to_many_objects(opts):
-        return [
-            f for f in opts.get_fields(include_hidden=True)
-            if f.many_to_many and f.auto_created
-        ]
-else:
-    def get_all_related_objects(opts):
-        return opts.get_all_related_objects()
-
-    def get_all_related_many_to_many_objects(opts):
-        return opts.get_all_related_many_to_many_objects()
-
-
-# Compatibility for the *field* instance returned by either
-# the old `Options.get_all_related_objects` or our own implementation above
-def get_relation_accessor_name(relation):
-    if not hasattr(relation, 'get_accessor_name'):
-        # special case for the `OneToOneField` instances
-        return relation.name
-    return relation.get_accessor_name()
-
-def get_relation_field(relation):
-    if not hasattr(relation, 'get_accessor_name'):
-        # special case for the `OneToOneField` instances
-        return relation
-    return relation.field
-
-
 # django-filter is optional
 try:
     import django_filters
 except ImportError:
     django_filters = None
+
+
+# django-crispy-forms is optional
+try:
+    import crispy_forms
+except ImportError:
+    crispy_forms = None
+
+
+if django.VERSION >= (1, 6):
+    def clean_manytomany_helptext(text):
+        return text
+else:
+    # Up to version 1.5 many to many fields automatically suffix
+    # the `help_text` attribute with hardcoded text.
+    def clean_manytomany_helptext(text):
+        if text.endswith(' Hold down "Control", or "Command" on a Mac, to select more than one.'):
+            text = text[:-69]
+        return text
+
 
 # Django-guardian is optional. Import only if guardian is in INSTALLED_APPS
 # Fixes (#1712). We keep the try/except for the test suite.
@@ -204,6 +186,12 @@ if django.VERSION >= (1, 8):
 else:
     DurationField = duration_string = parse_duration = None
 
+try:
+    # DecimalValidator is unavailable in Django < 1.9
+    from django.core.validators import DecimalValidator
+except ImportError:
+    DecimalValidator = None
+
 
 def set_rollback():
     if hasattr(transaction, 'set_rollback'):
@@ -220,3 +208,65 @@ def set_rollback():
     else:
         # transaction not managed
         pass
+
+
+def template_render(template, context=None, request=None):
+    """
+    Passing Context or RequestContext to Template.render is deprecated in 1.9+,
+    see https://github.com/django/django/pull/3883 and
+    https://github.com/django/django/blob/1.9rc1/django/template/backends/django.py#L82-L84
+
+    :param template: Template instance
+    :param context: dict
+    :param request: Request instance
+    :return: rendered template as SafeText instance
+    """
+    if django.VERSION < (1, 8) or isinstance(template, Template):
+        if request:
+            context = RequestContext(request, context)
+        else:
+            context = Context(context)
+        return template.render(context)
+    # backends template, e.g. django.template.backends.django.Template
+    else:
+        return template.render(context, request=request)
+
+
+# Models Options old meta api
+# Django 1.8 introduced the `Options.get_fields` method that can be used to
+# implement *old* meta api methods
+# See: https://docs.djangoproject.com/en/1.9/ref/models/meta/#migrating-from-the-old-api
+if django.VERSION >= (1, 8):
+    def get_all_related_objects(opts):
+        return [
+            f for f in opts.get_fields()
+            if (f.one_to_many or f.one_to_one) and f.auto_created
+        ]
+
+    def get_all_related_many_to_many_objects(opts):
+        return [
+            f for f in opts.get_fields(include_hidden=True)
+            if f.many_to_many and f.auto_created
+        ]
+else:
+    def get_all_related_objects(opts):
+        return opts.get_all_related_objects()
+
+    def get_all_related_many_to_many_objects(opts):
+        return opts.get_all_related_many_to_many_objects()
+
+
+# Compatibility for the *field* instance returned by either
+# the old `Options.get_all_related_objects` or our own implementation above
+def get_relation_accessor_name(relation):
+    if not hasattr(relation, 'get_accessor_name'):
+        # special case for the `OneToOneField` instances
+        return relation.name
+    return relation.get_accessor_name()
+
+
+def get_relation_field(relation):
+    if not hasattr(relation, 'get_accessor_name'):
+        # special case for the `OneToOneField` instances
+        return relation
+    return relation.field

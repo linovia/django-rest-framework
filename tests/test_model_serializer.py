@@ -67,6 +67,7 @@ class RegularFieldsModel(models.Model):
     time_field = models.TimeField()
     url_field = models.URLField(max_length=100)
     custom_field = CustomField()
+    file_path_field = models.FilePathField(path='/tmp/')
 
     def method(self):
         return 'method'
@@ -165,6 +166,7 @@ class TestRegularFieldMappings(TestCase):
                 time_field = TimeField()
                 url_field = URLField(max_length=100)
                 custom_field = ModelField(model_field=<tests.test_model_serializer.CustomField: custom_field>)
+                file_path_field = FilePathField(path='/tmp/')
         """)
 
         self.assertEqual(unicode_repr(TestSerializer()), expected)
@@ -859,3 +861,82 @@ class Issue2704TestCase(TestCase):
         }]
 
         assert serializer.data == expected
+
+
+class DecimalFieldModel(models.Model):
+    decimal_field = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        validators=[MinValueValidator(1), MaxValueValidator(3)]
+    )
+
+
+class TestDecimalFieldMappings(TestCase):
+    def test_decimal_field_has_decimal_validator(self):
+        """
+        Test that a `DecimalField` has no `DecimalValidator`.
+        """
+        class TestSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = DecimalFieldModel
+
+        serializer = TestSerializer()
+
+        assert len(serializer.fields['decimal_field'].validators) == 2
+
+    def test_min_value_is_passed(self):
+        """
+        Test that the `MinValueValidator` is converted to the `min_value`
+        argument for the field.
+        """
+        class TestSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = DecimalFieldModel
+
+        serializer = TestSerializer()
+
+        assert serializer.fields['decimal_field'].min_value == 1
+
+    def test_max_value_is_passed(self):
+        """
+        Test that the `MaxValueValidator` is converted to the `max_value`
+        argument for the field.
+        """
+        class TestSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = DecimalFieldModel
+
+        serializer = TestSerializer()
+
+        assert serializer.fields['decimal_field'].max_value == 3
+
+
+class TestMetaInheritance(TestCase):
+    def test_extra_kwargs_not_altered(self):
+        class TestSerializer(serializers.ModelSerializer):
+            non_model_field = serializers.CharField()
+
+            class Meta:
+                model = OneFieldModel
+                read_only_fields = ('char_field', 'non_model_field')
+                fields = read_only_fields
+                extra_kwargs = {}
+
+        class ChildSerializer(TestSerializer):
+            class Meta(TestSerializer.Meta):
+                read_only_fields = ()
+
+        test_expected = dedent("""
+            TestSerializer():
+                char_field = CharField(read_only=True)
+                non_model_field = CharField()
+        """)
+
+        child_expected = dedent("""
+            ChildSerializer():
+                char_field = CharField(max_length=100)
+                non_model_field = CharField()
+        """)
+        self.assertEqual(unicode_repr(ChildSerializer()), child_expected)
+        self.assertEqual(unicode_repr(TestSerializer()), test_expected)
+        self.assertEqual(unicode_repr(ChildSerializer()), child_expected)

@@ -83,6 +83,10 @@ We can override `.get_queryset()` to deal with URLs such as `http://example.com/
 
 As well as being able to override the default queryset, REST framework also includes support for generic filtering backends that allow you to easily construct complex searches and filters.
 
+Generic filters can also present themselves as HTML controls in the browsable API and admin API.
+
+![Filter Example](../img/filter-controls.png)
+
 ## Setting filter backends
 
 The default filter backends may be set globally, using the `DEFAULT_FILTER_BACKENDS` setting.  For example.
@@ -95,9 +99,9 @@ You can also set the filter backends on a per-view, or per-viewset basis,
 using the `GenericAPIView` class based views.
 
     from django.contrib.auth.models import User
-	from myapp.serializers import UserSerializer
+    from myapp.serializers import UserSerializer
     from rest_framework import filters
-	from rest_framework import generics
+    from rest_framework import generics
 
     class UserListView(generics.ListAPIView):
         queryset = User.objects.all()
@@ -141,6 +145,13 @@ To use REST framework's `DjangoFilterBackend`, first install `django-filter`.
 
     pip install django-filter
 
+If you are using the browsable API or admin API you may also want to install `django-crispy-forms`, which will enhance the presentation of the filter forms in HTML views, by allowing them to render Bootstrap 3 HTML.
+
+    pip install django-crispy-forms
+
+With crispy forms installed and added to Django's `INSTALLED_APPS`, the browsable API will present a filtering control for `DjangoFilterBackend`, like so:
+
+![Django Filter](../img/django-filter.png)
 
 #### Specifying filter fields
 
@@ -166,7 +177,7 @@ For more advanced filtering requirements you can specify a `FilterSet` class tha
     from rest_framework import filters
     from rest_framework import generics
 
-    class ProductFilter(django_filters.FilterSet):
+    class ProductFilter(filters.FilterSet):
         min_price = django_filters.NumberFilter(name="price", lookup_type='gte')
         max_price = django_filters.NumberFilter(name="price", lookup_type='lte')
         class Meta:
@@ -188,12 +199,12 @@ You can also span relationships using `django-filter`, let's assume that each
 product has foreign key to `Manufacturer` model, so we create filter that
 filters using `Manufacturer` name. For example:
 
-    import django_filters
     from myapp.models import Product
     from myapp.serializers import ProductSerializer
+    from rest_framework import filters
     from rest_framework import generics
 
-    class ProductFilter(django_filters.FilterSet):
+    class ProductFilter(filters.FilterSet):
         class Meta:
             model = Product
             fields = ['category', 'in_stock', 'manufacturer__name']
@@ -207,9 +218,10 @@ This is nice, but it exposes the Django's double underscore convention as part o
     import django_filters
     from myapp.models import Product
     from myapp.serializers import ProductSerializer
+    from rest_framework import filters
     from rest_framework import generics
 
-    class ProductFilter(django_filters.FilterSet):
+    class ProductFilter(filters.FilterSet):
         manufacturer = django_filters.CharFilter(name="manufacturer__name")
 
         class Meta:
@@ -236,6 +248,10 @@ For more details on using filter sets see the [django-filter documentation][djan
 ## SearchFilter
 
 The `SearchFilter` class supports simple single query parameter based searching, and is based on the [Django admin's search functionality][search-django-admin].
+
+When in use, the browsable API will include a `SearchFilter` control:
+
+![Search Filter](../img/search-filter.png)
 
 The `SearchFilter` class will only be applied if the view has a `search_fields` attribute set.  The `search_fields` attribute should be a list of names of text type fields on the model, such as `CharField` or `TextField`.
 
@@ -274,7 +290,11 @@ For more details, see the [Django documentation][search-django-admin].
 
 ## OrderingFilter
 
-The `OrderingFilter` class supports simple query parameter controlled ordering of results.  By default, the query parameter is named `'ordering'`, but this may by overridden with the `ORDERING_PARAM` setting.
+The `OrderingFilter` class supports simple query parameter controlled ordering of results.
+
+![Ordering Filter](../img/ordering-filter.png)
+
+By default, the query parameter is named `'ordering'`, but this may by overridden with the `ORDERING_PARAM` setting.
 
 For example, to order users by username:
 
@@ -388,6 +408,14 @@ For example, you might need to restrict users to only being able to see objects 
             return queryset.filter(owner=request.user)
 
 We could achieve the same behavior by overriding `get_queryset()` on the views, but using a filter backend allows you to more easily add this restriction to multiple views, or to apply it across the entire API.
+
+## Customizing the interface
+
+Generic filters may also present an interface in the browsable API. To do so you should implement a `to_html()` method which returns a rendered HTML representation of the filter. This method should have the following signature:
+
+`to_html(self, request, queryset, view)`
+
+The method should return a rendered HTML string.
 
 # Third party packages
 

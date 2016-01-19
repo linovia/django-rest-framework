@@ -12,9 +12,7 @@
 
 ---
 
-**Note**: This is the documentation for the **version 3.2** of REST framework. Documentation for [version 2.4](http://tomchristie.github.io/rest-framework-2-docs/) is also available.
-
-For more details see the 3.2 [announcement][3.2-announcement] and [release notes][release-notes].
+**Note**: This is the documentation for the **version 3** of REST framework. Documentation for [version 2](http://tomchristie.github.io/rest-framework-2-docs/) is also available.
 
 ---
 
@@ -31,7 +29,7 @@ For more details see the 3.2 [announcement][3.2-announcement] and [release notes
 <img alt="Django REST Framework" title="Logo by Jake 'Sid' Smith" src="img/logo.png" width="600px" style="display: block; margin: 0 auto 0 auto">
 </p>
 
-Django REST framework is a powerful and flexible toolkit that makes it easy to build Web APIs.
+Django REST framework is a powerful and flexible toolkit for building Web APIs.
 
 Some reasons you might want to use REST framework:
 
@@ -52,13 +50,14 @@ Some reasons you might want to use REST framework:
 
 REST framework requires the following:
 
-* Python (2.6.5+, 2.7, 3.2, 3.3, 3.4, 3.5)
+* Python (2.7, 3.2, 3.3, 3.4, 3.5)
 * Django (1.7+, 1.8, 1.9)
 
 The following packages are optional:
 
 * [Markdown][markdown] (2.1.0+) - Markdown support for the browsable API.
 * [django-filter][django-filter] (0.9.2+) - Filtering support.
+* [django-crispy-forms][django-crispy-forms] - Improved HTML display for filtering.
 * [django-guardian][django-guardian] (1.1.1+) - Object level permissions support.
 
 ## Installation
@@ -87,7 +86,7 @@ If you're intending to use the browsable API you'll probably also want to add RE
         url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework'))
     ]
 
-Note that the URL path can be whatever you want, but you must include `'rest_framework.urls'` with the `'rest_framework'` namespace.
+Note that the URL path can be whatever you want, but you must include `'rest_framework.urls'` with the `'rest_framework'` namespace. You may leave out the namespace in Django 1.9+, and REST framework will set it for you.
 
 ## Example
 
@@ -191,7 +190,9 @@ The API guide is your complete reference manual to all the functionality provide
 General guides to using REST framework.
 
 * [Documenting your API][documenting-your-api]
+* [Internationalization][internationalization]
 * [AJAX, CSRF & CORS][ajax-csrf-cors]
+* [HTML & Forms][html-and-forms]
 * [Browser enhancements][browser-enhancements]
 * [The Browsable API][browsableapi]
 * [REST, Hypermedia & HATEOAS][rest-hypermedia-hateoas]
@@ -201,6 +202,7 @@ General guides to using REST framework.
 * [3.0 Announcement][3.0-announcement]
 * [3.1 Announcement][3.1-announcement]
 * [3.2 Announcement][3.2-announcement]
+* [3.3 Announcement][3.3-announcement]
 * [Kickstarter Announcement][kickstarter-announcement]
 * [Release Notes][release-notes]
 
@@ -229,7 +231,7 @@ Send a description of the issue via email to [rest-framework-security@googlegrou
 
 ## License
 
-Copyright (c) 2011-2015, Tom Christie
+Copyright (c) 2011-2016, Tom Christie
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -256,6 +258,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 [eventbrite]: https://www.eventbrite.co.uk/about/
 [markdown]: http://pypi.python.org/pypi/Markdown/
 [django-filter]: http://pypi.python.org/pypi/django-filter
+[django-crispy-forms]: https://github.com/maraujop/django-crispy-forms
 [django-guardian]: https://github.com/lukaszb/django-guardian
 [0.4]: https://github.com/tomchristie/django-rest-framework/tree/0.4.X
 [image]: img/quickstart.png
@@ -303,8 +306,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 [settings]: api-guide/settings.md
 
 [documenting-your-api]: topics/documenting-your-api.md
-[internationalization]: topics/documenting-your-api.md
+[internationalization]: topics/internationalization.md
 [ajax-csrf-cors]: topics/ajax-csrf-cors.md
+[html-and-forms]: topics/html-and-forms.md
 [browser-enhancements]: topics/browser-enhancements.md
 [browsableapi]: topics/browsable-api.md
 [rest-hypermedia-hateoas]: topics/rest-hypermedia-hateoas.md
@@ -314,7 +318,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 [3.0-announcement]: topics/3.0-announcement.md
 [3.1-announcement]: topics/3.1-announcement.md
 [3.2-announcement]: topics/3.2-announcement.md
+[3.3-announcement]: topics/3.3-announcement.md
 [kickstarter-announcement]: topics/kickstarter-announcement.md
+[funding]: topics/funding.md
 [release-notes]: topics/release-notes.md
 
 [tox]: http://testrun.org/tox/latest/

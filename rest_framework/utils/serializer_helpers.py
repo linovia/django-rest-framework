@@ -90,7 +90,7 @@ class NestedBoundField(BoundField):
     """
 
     def __init__(self, field, value, errors, prefix=''):
-        if value is None:
+        if value is None or value is '':
             value = {}
         super(NestedBoundField, self).__init__(field, value, errors, prefix)
 
@@ -112,7 +112,7 @@ class NestedBoundField(BoundField):
             if isinstance(value, (list, dict)):
                 values[key] = value
             else:
-                values[key] = '' if value is None else force_text(value)
+                values[key] = '' if (value is None or value is False) else force_text(value)
         return self.__class__(self._field, values, self.errors, self._prefix)
 
 

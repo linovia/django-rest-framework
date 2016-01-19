@@ -604,8 +604,8 @@ class BooleanField(Field):
     }
     default_empty_html = False
     initial = False
-    TRUE_VALUES = set(('t', 'T', 'true', 'True', 'TRUE', '1', 1, True))
-    FALSE_VALUES = set(('f', 'F', 'false', 'False', 'FALSE', '0', 0, 0.0, False))
+    TRUE_VALUES = {'t', 'T', 'true', 'True', 'TRUE', '1', 1, True}
+    FALSE_VALUES = {'f', 'F', 'false', 'False', 'FALSE', '0', 0, 0.0, False}
 
     def __init__(self, **kwargs):
         assert 'allow_null' not in kwargs, '`allow_null` is not a valid option. Use `NullBooleanField` instead.'
@@ -634,9 +634,9 @@ class NullBooleanField(Field):
         'invalid': _('"{input}" is not a valid boolean.')
     }
     initial = None
-    TRUE_VALUES = set(('t', 'T', 'true', 'True', 'TRUE', '1', 1, True))
-    FALSE_VALUES = set(('f', 'F', 'false', 'False', 'FALSE', '0', 0, 0.0, False))
-    NULL_VALUES = set(('n', 'N', 'null', 'Null', 'NULL', '', None))
+    TRUE_VALUES = {'t', 'T', 'true', 'True', 'TRUE', '1', 1, True}
+    FALSE_VALUES = {'f', 'F', 'false', 'False', 'FALSE', '0', 0, 0.0, False}
+    NULL_VALUES = {'n', 'N', 'null', 'Null', 'NULL', '', None}
 
     def __init__(self, **kwargs):
         assert 'allow_null' not in kwargs, '`allow_null` is not a valid option.'
@@ -769,9 +769,11 @@ class UUIDField(Field):
             try:
                 if isinstance(data, six.integer_types):
                     return uuid.UUID(int=data)
-                else:
+                elif isinstance(data, six.string_types):
                     return uuid.UUID(hex=data)
-            except (ValueError, TypeError):
+                else:
+                    self.fail('invalid', value=data)
+            except (ValueError):
                 self.fail('invalid', value=data)
         return data
 
@@ -1059,6 +1061,9 @@ class DateTimeField(Field):
         self.fail('invalid', format=humanized_format)
 
     def to_representation(self, value):
+        if not value:
+            return None
+
         output_format = getattr(self, 'format', api_settings.DATETIME_FORMAT)
 
         if output_format is None:
@@ -1116,10 +1121,10 @@ class DateField(Field):
         self.fail('invalid', format=humanized_format)
 
     def to_representation(self, value):
-        output_format = getattr(self, 'format', api_settings.DATE_FORMAT)
-
         if not value:
             return None
+
+        output_format = getattr(self, 'format', api_settings.DATE_FORMAT)
 
         if output_format is None:
             return value
@@ -1134,7 +1139,7 @@ class DateField(Field):
         )
 
         if output_format.lower() == ISO_8601:
-            if (isinstance(value, str)):
+            if isinstance(value, six.string_types):
                 value = datetime.datetime.strptime(value, '%Y-%m-%d').date()
             return value.isoformat()
 
@@ -1181,6 +1186,9 @@ class TimeField(Field):
         self.fail('invalid', format=humanized_format)
 
     def to_representation(self, value):
+        if not value:
+            return None
+
         output_format = getattr(self, 'format', api_settings.TIME_FORMAT)
 
         if output_format is None:
@@ -1196,6 +1204,8 @@ class TimeField(Field):
         )
 
         if output_format.lower() == ISO_8601:
+            if isinstance(value, six.string_types):
+                value = datetime.datetime.strptime(value, '%H:%M:%S').time()
             return value.isoformat()
         return value.strftime(output_format)
 
@@ -1241,9 +1251,9 @@ class ChoiceField(Field):
         # Map the string representation of choices to the underlying value.
         # Allows us to deal with eg. integer choices while supporting either
         # integer or string input, but still get the correct datatype out.
-        self.choice_strings_to_values = dict([
-            (six.text_type(key), key) for key in self.choices.keys()
-        ])
+        self.choice_strings_to_values = {
+            six.text_type(key): key for key in self.choices.keys()
+        }
 
         self.allow_blank = kwargs.pop('allow_blank', False)
 
@@ -1302,15 +1312,15 @@ class MultipleChoiceField(ChoiceField):
         if not self.allow_empty and len(data) == 0:
             self.fail('empty')
 
-        return set([
+        return {
             super(MultipleChoiceField, self).to_internal_value(item)
             for item in data
-        ])
+        }
 
     def to_representation(self, value):
-        return set([
+        return {
             self.choice_strings_to_values.get(six.text_type(item), item) for item in value
-        ])
+        }
 
 
 class FilePathField(ChoiceField):
@@ -1461,7 +1471,7 @@ class ListField(Field):
         """
         if html.is_html_input(data):
             data = html.parse_html_list(data)
-        if isinstance(data, type('')) or not hasattr(data, '__iter__'):
+        if isinstance(data, type('')) or isinstance(data, collections.Mapping) or not hasattr(data, '__iter__'):
             self.fail('not_a_list', input_type=type(data).__name__)
         if not self.allow_empty and len(data) == 0:
             self.fail('empty')
@@ -1508,19 +1518,19 @@ class DictField(Field):
             data = html.parse_html_dict(data)
         if not isinstance(data, dict):
             self.fail('not_a_dict', input_type=type(data).__name__)
-        return dict([
-            (six.text_type(key), self.child.run_validation(value))
+        return {
+            six.text_type(key): self.child.run_validation(value)
             for key, value in data.items()
-        ])
+        }
 
     def to_representation(self, value):
         """
         List of object instances -> List of dicts of primitive datatypes.
         """
-        return dict([
-            (six.text_type(key), self.child.to_representation(val))
+        return {
+            six.text_type(key): self.child.to_representation(val)
             for key, val in value.items()
-        ])
+        }
 
 
 class JSONField(Field):
@@ -1565,7 +1575,7 @@ class ReadOnlyField(Field):
 
     For example, the following would call `get_expiry_date()` on the object:
 
-    class ExampleSerializer(self):
+    class ExampleSerializer(Serializer):
         expiry_date = ReadOnlyField(source='get_expiry_date')
     """
 
